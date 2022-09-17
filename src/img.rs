@@ -1,6 +1,5 @@
 use std::{convert::TryInto};
-use image::{ImageFormat, DynamicImage, io::Reader, imageops::FilterType::Triangle, GenericImageView};
-use std::{fs::File, io::BufReader};
+use image::{ImageFormat, DynamicImage, io::Reader, imageops::FilterType::Triangle, GenericImageView, ImageError};
 
 pub struct Img {
   pub width: u32,
@@ -36,14 +35,27 @@ impl Img {
 pub enum ImgDataErrors {
   DiffFormats,
   BufferTooSmall,
+  UnableToReadImageFromPath(std::io::Error),
+  UnableToFormatImage(String),
+  UnableToDecodeImage(ImageError),
+  UnableToSaveImage(ImageError)
 }
 
 // Finds image from path
-pub fn find_image_from_path(path: String) -> (DynamicImage, ImageFormat) {
-  let image_reader: Reader<BufReader<File>> = Reader::open(path).unwrap();
-  let image_format: ImageFormat = image_reader.format().unwrap();
-  let image: DynamicImage = image_reader.decode().unwrap();
-  (image, image_format)
+pub fn find_image_from_path(path: String) -> Result<(DynamicImage, ImageFormat), ImgDataErrors> {
+  match Reader::open(&path) {
+    Ok(image_reader) => {
+      if let Some(image_format) = image_reader.format() {
+        match image_reader.decode() {
+          Ok(image) => Ok((image, image_format)),
+          Err(e) => Err(ImgDataErrors::UnableToDecodeImage(e))
+        }
+      } else {
+        return Err(ImgDataErrors::UnableToFormatImage(path));
+      }
+    },
+    Err(e) => Err(ImgDataErrors::UnableToReadImageFromPath(e))
+  }
 }
 
 // Gets the smallest image dimensions

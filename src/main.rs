@@ -7,8 +7,8 @@ use img::{Img, ImgDataErrors, find_image_from_path, standardise_size, combine_im
 fn main() -> Result<(), ImgDataErrors> {
   // Grab images from storage
   let args = Args::new();
-  let (image_1, image_format_1) = find_image_from_path(args.image_1);
-  let (image_2, image_format_2) = find_image_from_path(args.image_2);
+  let (image_1, image_format_1) = find_image_from_path(args.image_1)?;
+  let (image_2, image_format_2) = find_image_from_path(args.image_2)?;
 
   // Check image formats
   if image_format_1 != image_format_2 {
@@ -22,6 +22,9 @@ fn main() -> Result<(), ImgDataErrors> {
   output.set_data(combined_data)?;
 
   // Save image
-  image::save_buffer_with_format(output.name, &output.data, output.width, output.height, image::ColorType::Rgba8, image_format_1).unwrap();
-  Ok(())
+  if let Err(e) = image::save_buffer_with_format(output.name, &output.data, output.width, output.height, image::ColorType::Rgba8, image_format_1) {
+    Err(ImgDataErrors::UnableToSaveImage(e))
+  } else {
+    Ok(())
+  }
 }
